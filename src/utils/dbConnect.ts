@@ -19,23 +19,20 @@
 
 // lib/dbConnect.ts
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client'
 
-// Augment the NodeJS global type to include our prisma instance
-declare global {
-  var prisma: PrismaClient | undefined;
+const prismaClientSingleton = () => {
+  return new PrismaClient()
 }
 
-let prisma: PrismaClient;
-
-if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient();
-} else {
-  // In development mode, we reuse the Prisma Client to prevent exhausting the database connection limit
-  if (!global.prisma) {
-    global.prisma = new PrismaClient();
-  }
-  prisma = global.prisma;
+type GlobalThisWithPrisma = typeof globalThis & {
+  prisma: PrismaClient | undefined;
 }
 
-export default prisma;
+const prisma = (globalThis as GlobalThisWithPrisma).prisma ?? prismaClientSingleton()
+
+if (process.env.NODE_ENV !== 'production') {
+  (globalThis as GlobalThisWithPrisma).prisma = prisma
+}
+
+export default prisma
